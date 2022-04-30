@@ -1,28 +1,24 @@
 package project_utils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 
 public abstract class Serializer {
-    public static byte[] serialize(Object object) {
+    public static byte[] serialize(Object object) throws IOException {
         var byteOutputStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectOut = null;
-        byte[] objectOutBytes = null;
 
-        try {
+       // var objectOut = new ObjectOutputStream(byteOutputStream);
 
-            objectOut = new ObjectOutputStream(byteOutputStream);
-            objectOut.writeObject(object);
-            objectOut.flush();
+        var objectOut = new ObjectOutputStream(new BufferedOutputStream(byteOutputStream));
+        objectOut.flush();
+        byte[] objectOutBytes;
+        objectOut.writeObject(object);
+        objectOut.close();
 
-            objectOutBytes = byteOutputStream.toByteArray();
-
-            byteOutputStream.close();
-            objectOut.close();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
+        objectOutBytes = byteOutputStream.toByteArray();
+        byteOutputStream.close();
 
         return objectOutBytes;
     }
+
+
 }

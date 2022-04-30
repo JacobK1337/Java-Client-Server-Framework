@@ -3,31 +3,48 @@ package custom_implementations;
 import message.Message;
 import message.MessageHandler;
 import project_utils.Serializer;
-
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+
 public class MessageHandlerImpl implements MessageHandler<CustomMessageType> {
+
     @Override
     public Message<CustomMessageType> readMessage(SocketChannel socket, ByteBuffer buffer) throws IOException, ClassNotFoundException {
-        socket.read(buffer);
+        int countRead = 0;
+        while(countRead < buffer.limit()){
+            countRead += socket.read(buffer);
 
-        var inputStream = new ByteArrayInputStream(buffer.array());
-        ObjectInput inputObject = null;
-        inputObject = new ObjectInputStream(inputStream);
+        }
 
-        buffer.clear();
-        return (Message<CustomMessageType>) inputObject.readObject();
+        try(
+                var inputStream = new ByteArrayInputStream(buffer.array());
+                var inputObject = new ObjectInputStream(new BufferedInputStream(inputStream))
+        ){
+            return (Message<CustomMessageType>) inputObject.readObject();
+        }
     }
+
 
     @Override
     public void writeMessage(Message<CustomMessageType> message, SocketChannel socket, ByteBuffer buffer) throws IOException {
-        buffer = ByteBuffer.wrap(Serializer.serialize(message));
-        socket.write(buffer);
+        var serializedMessage = Serializer.serialize(message);
+        final int MESSAGE_HEADER_SIZE = 4;
+
+        buffer.limit(MESSAGE_HEADER_SIZE + serializedMessage.length);
+        buffer.putInt(serializedMessage.length);
+        buffer.put(serializedMessage);
+        buffer.rewind();
+
+        int countWritten = 0;
+        while(countWritten < buffer.limit()){
+            countWritten += socket.write(buffer);
+        }
+
         buffer.clear();
     }
 }

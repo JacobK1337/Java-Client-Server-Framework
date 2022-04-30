@@ -1,28 +1,26 @@
 package custom_implementations;
 
 import java.io.Serializable;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
 public enum CustomMessageType implements Serializable {
-    NOT_ASSIGNED,
-
+    //client's requests
     UPLOAD_FILE,
     DELETE_FILE,
     DOWNLOAD_FILE,
     CHANGE_DIRECTORY,
-
-    //connection operations
     DISCONNECT,
 
-    //verified request on data connection
-    DATA_STREAM_VERIFIED,
+    //server responses
+    REQUEST_ACCEPT,
+    REQUEST_REJECT,
 
-    //server verification responses
-    SERVER_OK,
-    SERVER_ERROR,
+    //server messages
+    SERVER_MSG,
 
-    //upload file operations
-    UPLOAD_ACCEPT,
-    UPLOAD_REJECT,
-    UPLOAD_DATA,
-    UPLOAD_FINISHED
+    //data stream headers
+    DOWNLOAD_DATA,
+    UPLOAD_DATA;
 }

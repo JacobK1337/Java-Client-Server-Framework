@@ -31,8 +31,8 @@ public abstract class Server <MessageType> {
     protected final Lock requestedFilesEmptyLock = new ReentrantLock();
     protected final Condition requestedFilesEmpty = requestedFilesEmptyLock.newCondition();
     protected int ID_COUNTER = 0;
-    protected final int MAX_BUFFER_CAPACITY = 1000000;
-    protected final int MAX_BANDWIDTH = 100000;
+    protected final int MAX_BUFFER_CAPACITY = 10000;
+    protected final int MAX_BANDWIDTH = 1024;
     protected volatile boolean running = false;
 
     public Server(int port,
