@@ -47,6 +47,17 @@ public class ClientApp {
                         .forEach(serverFile -> System.out.println(serverFile.getFileName()));
             }
 
+            else if (commandAndParam[0].equals("delete")){
+
+                var deleteRequest =
+                        new MessageFactoryImpl().constructMessage(
+                                CustomMessageType.DELETE_FILE,
+                                List.of(clientInstance.getCurrentServerPath(), commandAndParam[1])
+                        );
+
+                clientInstance.sendRequest(deleteRequest);
+            }
+
         }
 
     }
