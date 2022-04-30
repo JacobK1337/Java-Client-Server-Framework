@@ -5,7 +5,9 @@ import project_utils.FileInfo;
 import project_utils.LocalFile;
 import message.Message;
 import server.Server;
+
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.*;
@@ -13,25 +15,25 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ServerImpl extends Server<CustomMessageType> {
+
+    ByteBuffer messageSizeBuffer = ByteBuffer.allocate(4);
+
+
     public ServerImpl(int port) throws IOException {
         super(port, new MessageFactoryImpl(), new MessageHandlerImpl());
     }
 
     @Override
-    protected void sendDataToClients() throws IOException, InterruptedException {
-        Thread.sleep(500);
-
+    protected void sendDataToClients() throws IOException {
         for (var file : requestedFiles) {
-
             System.out.println("Remaining bytes: " + file.getRemainingBytes());
-
-            var bytesResponse =
+            var fileBytesMessage =
                     messageFactory.constructMessage(
                             CustomMessageType.DOWNLOAD_FILE,
                             List.of(file.getClientFileToken(), file.readBytesFromFile(MAX_BANDWIDTH))
                     );
 
-            messageHandler.writeMessage(bytesResponse, file.getReceiver(), sentMessageBuffer);
+            messageHandler.writeMessage(fileBytesMessage, file.getReceiver(), sentMessageBuffer);
         }
 
         requestedFiles.removeIf(localFile -> localFile.getRemainingBytes() <= 0 || !localFile.getReceiver().isOpen());
@@ -41,12 +43,23 @@ public class ServerImpl extends Server<CustomMessageType> {
     protected void handleMessage(SelectionKey key) throws IOException, ClassNotFoundException {
         requestedFilesEmptyLock.lock();
         var client = (SocketChannel) key.channel();
+
+        client.read(messageSizeBuffer);
+        messageSizeBuffer.rewind();
+
+        var messageSize = messageSizeBuffer.getInt();
+        messageSizeBuffer.rewind();
+
+        System.out.println("Received message size: " + messageSize);
+        receivedMessageBuffer.limit(messageSize);
+
         var receivedRequest = messageHandler.readMessage(client, receivedMessageBuffer);
+        receivedMessageBuffer.clear();
 
         switch (receivedRequest.getMessageType()) {
             case DOWNLOAD_FILE -> handleDownloadRequest(receivedRequest, client);
             case CHANGE_DIRECTORY -> handleChangeDirectoryRequest(receivedRequest, client);
-            case DELETE_FILE -> System.out.println("DELETE_FILE");
+            case DELETE_FILE -> handleDeleteRequest(receivedRequest, client);
         }
         requestedFilesEmptyLock.unlock();
     }
@@ -58,7 +71,6 @@ public class ServerImpl extends Server<CustomMessageType> {
             var fileName = (String) message.extractFromBuffer();
 
             requestedFiles.add(new LocalFile(clientFileId, defaultServerPath + fileName, client));
-
             requestedFilesEmpty.signal();
         }
     }
@@ -75,10 +87,30 @@ public class ServerImpl extends Server<CustomMessageType> {
                         )
                         .collect(Collectors.toList());
 
-        var serverResponse =
+        var filesInDirectoryResponse =
                 messageFactory.constructMessage(CustomMessageType.CHANGE_DIRECTORY, filesInRequestedDirectory);
 
-        messageHandler.writeMessage(serverResponse, client, sentMessageBuffer);
+        messageHandler.writeMessage(filesInDirectoryResponse, client, sentMessageBuffer);
+    }
+
+    private void handleDeleteRequest(Message<CustomMessageType> message, SocketChannel client) throws IOException {
+        var clientServerDirectory = (String) message.extractFromBuffer();
+        var fileToDeleteName = (String) message.extractFromBuffer();
+        var fileBeingDeleted = new File(defaultServerPath + clientServerDirectory + fileToDeleteName);
+
+        if (fileBeingDeleted.delete()) {
+            var fileDeletedResponse =
+                    messageFactory.constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("File successfully deleted."));
+
+            messageHandler.writeMessage(fileDeletedResponse, client, sentMessageBuffer);
+        }
+
+        else {
+            var noSuchFileResponse =
+                    messageFactory.constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("Couldn't delete file."));
+
+            messageHandler.writeMessage(noSuchFileResponse, client, sentMessageBuffer);
+        }
     }
 
 }
