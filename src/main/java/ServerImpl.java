@@ -5,26 +5,29 @@ import project_utils.FileInfo;
 import project_utils.LocalFile;
 import message.Message;
 import server.Server;
-
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ServerImpl extends Server<CustomMessageType> {
-
-    ByteBuffer messageSizeBuffer = ByteBuffer.allocate(4);
-
+    private final Queue<LocalFile> requestedFiles = new LinkedBlockingQueue<>();
+    protected final Lock requestedFilesEmptyLock = new ReentrantLock();
+    protected final Condition requestedFilesEmpty = requestedFilesEmptyLock.newCondition();
 
     public ServerImpl(int port) throws IOException {
         super(port, new MessageFactoryImpl(), new MessageHandlerImpl());
+        startConcurrentTransfer();
     }
 
     @Override
-    protected void sendDataToClients() throws IOException {
+    protected void concurrentDataTransfer() throws IOException {
         for (var file : requestedFiles) {
             System.out.println("Remaining bytes: " + file.getRemainingBytes());
             var fileBytesMessage =
@@ -35,37 +38,28 @@ public class ServerImpl extends Server<CustomMessageType> {
 
             messageHandler.writeMessage(fileBytesMessage, file.getReceiver(), sentMessageBuffer);
         }
-
         requestedFiles.removeIf(localFile -> localFile.getRemainingBytes() <= 0 || !localFile.getReceiver().isOpen());
     }
 
     @Override
-    protected void handleMessage(SelectionKey key) throws IOException, ClassNotFoundException {
-        requestedFilesEmptyLock.lock();
+    protected void readMessage(SelectionKey key) throws IOException, ClassNotFoundException {
         var client = (SocketChannel) key.channel();
 
-        client.read(messageSizeBuffer);
-        messageSizeBuffer.rewind();
-
-        var messageSize = messageSizeBuffer.getInt();
-        messageSizeBuffer.rewind();
-
-        System.out.println("Received message size: " + messageSize);
+        var messageSize = messageHandler.readMessageSize(client, messageSizeBuffer);
         receivedMessageBuffer.limit(messageSize);
-
         var receivedRequest = messageHandler.readMessage(client, receivedMessageBuffer);
-        receivedMessageBuffer.clear();
 
         switch (receivedRequest.getMessageType()) {
             case DOWNLOAD_FILE -> handleDownloadRequest(receivedRequest, client);
             case CHANGE_DIRECTORY -> handleChangeDirectoryRequest(receivedRequest, client);
             case DELETE_FILE -> handleDeleteRequest(receivedRequest, client);
         }
-        requestedFilesEmptyLock.unlock();
+
     }
 
-
     private void handleDownloadRequest(Message<CustomMessageType> message, SocketChannel client) throws FileNotFoundException {
+        requestedFilesEmptyLock.lock();
+
         while (!message.isBufferEmpty()) {
             var clientFileId = (Long) message.extractFromBuffer();
             var fileName = (String) message.extractFromBuffer();
@@ -73,6 +67,8 @@ public class ServerImpl extends Server<CustomMessageType> {
             requestedFiles.add(new LocalFile(clientFileId, defaultServerPath + fileName, client));
             requestedFilesEmpty.signal();
         }
+
+        requestedFilesEmptyLock.unlock();
     }
 
     private void handleChangeDirectoryRequest(Message<CustomMessageType> message, SocketChannel client) throws IOException {

@@ -1,1 +1,0 @@
-java -cp target/FileTransferServerJava-1.0-SNAPSHOT.jar ServerApp
