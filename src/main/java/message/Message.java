@@ -1,5 +1,7 @@
 package message;
 
+import client.Client;
+
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -10,6 +12,7 @@ import java.util.stream.Collectors;
 public class Message<MessageType> implements Serializable {
     private MessageType messageType;
     private Queue<Object> memBuffer;
+    private Client sender;
 
     public Message(MessageType messageType) {
         this.messageType = messageType;
@@ -52,5 +55,6 @@ public class Message<MessageType> implements Serializable {
     public MessageType getMessageType() {
         return messageType;
     }
+
 
 }

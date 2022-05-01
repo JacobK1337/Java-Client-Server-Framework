@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 public class LocalFile {
-
     private final long clientFileToken;
     private final File localFile;
     private long remainingBytes;
@@ -15,29 +14,23 @@ public class LocalFile {
     private  SocketChannel receiver;
 
     public LocalFile(long clientFileToken, String localFileAddress, SocketChannel receiver) throws FileNotFoundException {
-
         this.clientFileToken = clientFileToken;
-
-        localFile = new File(localFileAddress);
-
-        inputStream = new FileInputStream(localFile);
-
+        this.localFile = new File(localFileAddress);
+        this.inputStream = new FileInputStream(localFile);
         this.receiver = receiver;
-
-        remainingBytes = localFile.length();
+        this.remainingBytes = localFile.length();
     }
-
-
 
     public byte[] readBytesFromFile(long size) throws IOException {
         var sizeInBytes = Math.min(size, remainingBytes);
-
         var readBytes = new byte[(int) sizeInBytes];
 
-        inputStream.read(readBytes);
+        int countRead = 0;
+        while(countRead < sizeInBytes){
+            countRead += inputStream.read(readBytes);
+        }
 
         remainingBytes -= sizeInBytes;
-
         return readBytes;
     }
 

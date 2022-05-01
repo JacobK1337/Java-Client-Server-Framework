@@ -10,7 +10,6 @@ import java.io.ObjectInputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-
 public class MessageHandlerImpl implements MessageHandler<CustomMessageType> {
 
     @Override
@@ -18,17 +17,27 @@ public class MessageHandlerImpl implements MessageHandler<CustomMessageType> {
         int countRead = 0;
         while(countRead < buffer.limit()){
             countRead += socket.read(buffer);
-
         }
 
         try(
                 var inputStream = new ByteArrayInputStream(buffer.array());
                 var inputObject = new ObjectInputStream(new BufferedInputStream(inputStream))
         ){
+            buffer.clear();
             return (Message<CustomMessageType>) inputObject.readObject();
         }
     }
 
+    @Override
+    public int readMessageSize(SocketChannel socket, ByteBuffer buffer) throws IOException {
+        socket.read(buffer);
+        buffer.rewind();
+
+        var messageSize = buffer.getInt();
+        buffer.rewind();
+
+        return messageSize;
+    }
 
     @Override
     public void writeMessage(Message<CustomMessageType> message, SocketChannel socket, ByteBuffer buffer) throws IOException {
