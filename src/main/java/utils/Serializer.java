@@ -1,6 +1,9 @@
-package project_utils;
+package utils;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 
 public abstract class Serializer {
     public static byte[] serialize(Object object) throws IOException {
@@ -17,6 +20,4 @@ public abstract class Serializer {
 
         return objectOutBytes;
     }
-
-
 }

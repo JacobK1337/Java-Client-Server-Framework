@@ -41,12 +41,7 @@ public class Message<MessageType> implements Serializable {
     }
 
     public List<Object> extractAllFromBuffer() {
-
-        var allObjects =
-                memBuffer
-                        .stream()
-                        .toList();
-
+        var allObjects = memBuffer.stream().toList();
         memBuffer.clear();
 
         return allObjects;
