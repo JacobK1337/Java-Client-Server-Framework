@@ -1,17 +1,18 @@
 import custom_implementations.CustomMessageType;
 import custom_implementations.MessageFactoryImpl;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
+
 public class ClientApp {
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
         var clientInstance = new ClientImpl("localhost", 5454);
 
         boolean running = true;
         var scan = new Scanner(System.in);
 
+        clientInstance.readMessage();
         while(running){
             var command = scan.nextLine();
 
@@ -40,6 +41,7 @@ public class ClientApp {
                 );
 
                 clientInstance.sendRequest(downloadRequest);
+                clientInstance.readMessage();
             }
             else if(commandAndParam[0].equals("ls")){
                 clientInstance
@@ -56,6 +58,7 @@ public class ClientApp {
                         );
 
                 clientInstance.sendRequest(deleteRequest);
+                clientInstance.readMessage();
             }
 
         }
