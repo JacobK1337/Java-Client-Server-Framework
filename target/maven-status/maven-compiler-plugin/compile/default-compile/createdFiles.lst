@@ -1,3 +1,8 @@
 ClientApp.class
 ClientImpl$1.class
+file\RemoteFile.class
+file\FileInfo.class
+file\FileInfo$FileType.class
+CustomMessageType.class
+file\LocalFile.class
 ClientImpl.class

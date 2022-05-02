@@ -1,9 +1,7 @@
-import custom_implementations.CustomMessageType;
-import custom_implementations.MessageFactoryImpl;
+import message.MessageFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
-
 
 public class ClientApp {
     public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
@@ -12,25 +10,22 @@ public class ClientApp {
         boolean running = true;
         var scan = new Scanner(System.in);
 
-        clientInstance.readMessage();
-        while(running){
+        while (running) {
             var command = scan.nextLine();
-
             var commandAndParam = command.split(" ");
 
-            if(command.equals("exit")){
+            if (command.equals("exit")) {
                 running = false;
                 clientInstance.disconnect();
-            }
-            else if(commandAndParam[0].equals("download")){
+            } else if (commandAndParam[0].equals("download")) {
                 var requestedFile =
                         clientInstance.getFilesInServerDirectory()
-                        .stream()
-                        .filter(serverFile -> serverFile.getFileName().equals(commandAndParam[1]))
-                        .findFirst();
+                                .stream()
+                                .filter(serverFile -> serverFile.getFileName().equals(commandAndParam[1]))
+                                .findFirst();
 
                 var downloadRequest =
-                        new MessageFactoryImpl().constructMessage(
+                        new MessageFactory<CustomMessageType>().constructMessage(
                                 CustomMessageType.DOWNLOAD_FILE,
                                 List.of(clientInstance.getRequestedFilesCounter(), commandAndParam[1])
                         );
@@ -41,27 +36,20 @@ public class ClientApp {
                 );
 
                 clientInstance.sendRequest(downloadRequest);
-                clientInstance.readMessage();
-            }
-            else if(commandAndParam[0].equals("ls")){
+            } else if (commandAndParam[0].equals("ls")) {
                 clientInstance
                         .getFilesInServerDirectory()
                         .forEach(serverFile -> System.out.println(serverFile.getFileName()));
-            }
-
-            else if (commandAndParam[0].equals("delete")){
+            } else if (commandAndParam[0].equals("delete")) {
 
                 var deleteRequest =
-                        new MessageFactoryImpl().constructMessage(
+                        new MessageFactory<CustomMessageType>().constructMessage(
                                 CustomMessageType.DELETE_FILE,
                                 List.of(clientInstance.getCurrentServerPath(), commandAndParam[1])
                         );
 
                 clientInstance.sendRequest(deleteRequest);
-                clientInstance.readMessage();
             }
-
         }
-
     }
 }

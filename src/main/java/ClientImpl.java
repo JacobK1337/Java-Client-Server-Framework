@@ -1,9 +1,8 @@
 import client.Client;
-import custom_implementations.CustomMessageType;
-import custom_implementations.MessageFactoryImpl;
-import custom_implementations.MessageHandlerImpl;
-import project_utils.FileInfo;
-import project_utils.RemoteFile;
+import message.MessageFactory;
+import message.MessageHandler;
+import file.FileInfo;
+import file.RemoteFile;
 import message.Message;
 import java.io.*;
 import java.util.ArrayList;
@@ -20,17 +19,32 @@ public class ClientImpl extends Client<CustomMessageType> {
     private List<FileInfo> filesInServerDirectory = new ArrayList<>();
 
     public ClientImpl(String address, int port) throws IOException {
-        super(address, port, new MessageHandlerImpl(), new MessageFactoryImpl());
+        super(address, port, new MessageHandler<CustomMessageType>(), new MessageFactory<CustomMessageType>());
 
         var getServerFilesRequest =
                 messageFactory.constructMessage(CustomMessageType.CHANGE_DIRECTORY, List.of(currentServerPath));
         messageHandler.writeMessage(getServerFilesRequest, clientSocket, sentMessageBuffer);
 
+        startAsyncProcessing();
     }
 
     @Override
-    protected void concurrentDataTransfer(){
+    protected void asyncWriteMessage() {
+    }
 
+    @Override
+    protected void asyncReadMessage() throws IOException, ClassNotFoundException {
+        var receivedMessage = readMessage();
+        handleMessage(receivedMessage);
+    }
+
+    @Override
+    protected void handleMessage(Message<CustomMessageType> message) throws IOException {
+        switch (message.getMessageType()) {
+            case DOWNLOAD_FILE -> handleDownloadResponse(message);
+            case CHANGE_DIRECTORY -> handleChangeDirectoryResponse(message);
+            case REQUEST_ACCEPT -> handleRequestAcceptResponse(message);
+        }
     }
 
     public void addToRequestedFiles(FileInfo serverFile) throws IOException {
@@ -48,19 +62,6 @@ public class ClientImpl extends Client<CustomMessageType> {
 
     public String getCurrentServerPath() {
         return currentServerPath;
-    }
-
-    @Override
-    protected void readMessage() throws IOException, ClassNotFoundException {
-        var messageSize = messageHandler.readMessageSize(clientSocket, messageSizeBuffer);
-        receivedMessageBuffer.limit(messageSize);
-        var receivedMessage = messageHandler.readMessage(clientSocket, receivedMessageBuffer);
-
-        switch (receivedMessage.getMessageType()) {
-            case DOWNLOAD_FILE -> handleDownloadResponse(receivedMessage);
-            case CHANGE_DIRECTORY -> handleChangeDirectoryResponse(receivedMessage);
-            case REQUEST_ACCEPT -> handleRequestAcceptResponse(receivedMessage);
-        }
     }
 
     private void handleDownloadResponse(Message<CustomMessageType> message) throws IOException {
