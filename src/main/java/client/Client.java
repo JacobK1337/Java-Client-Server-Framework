@@ -1,5 +1,6 @@
 package client;
 
+import message.Message;
 import message.MessageFactory;
 import message.MessageHandler;
 import java.io.IOException;
@@ -15,8 +16,7 @@ public abstract class Client<MessageType> {
     protected final ByteBuffer messageSizeBuffer;
     protected MessageHandler<MessageType> messageHandler;
     protected MessageFactory<MessageType> messageFactory;
-    protected Thread asyncWriteMessageThread;
-    protected Thread asyncReadMessageThread;
+    protected Thread asyncProcessingThread;
     protected int MAX_BUFFER_CAPACITY = 10000;
     protected int MAX_BANDWIDTH = 1024;
     protected final int MESSAGE_HEADER_SIZE = 4;
@@ -36,39 +36,36 @@ public abstract class Client<MessageType> {
         running.set(true);
     }
 
-    protected void startAsyncWriteMessage() {
-        asyncWriteMessageThread = new Thread(() -> {
-            while (running.get()) {
-                asyncWriteMessage();
-            }
-        });
-        asyncWriteMessageThread.start();
-    }
-
-    protected void startAsyncReadMessage() {
-        asyncReadMessageThread = new Thread(() -> {
+    protected void startAsyncProcessing() {
+        asyncProcessingThread = new Thread(() -> {
             while (running.get()) {
                 try {
                     asyncReadMessage();
+                    asyncWriteMessage();
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
             }
         });
-        asyncReadMessageThread.start();
+        asyncProcessingThread.start();
     }
 
+    protected Message<MessageType> readMessage() throws IOException, ClassNotFoundException {
+        var messageSize = messageHandler.readMessageSize(clientSocket, messageSizeBuffer);
+        receivedMessageBuffer.limit(messageSize);
+
+        return messageHandler.readMessage(clientSocket, receivedMessageBuffer);
+    }
 
     public void disconnect() throws IOException, InterruptedException {
         clientSocket.close();
         running.set(false);
-        asyncWriteMessageThread.join();
-        asyncReadMessageThread.join();
+        asyncProcessingThread.join();
     }
 
     protected abstract void asyncWriteMessage();
 
     protected abstract void asyncReadMessage() throws IOException, ClassNotFoundException;
 
-    protected abstract void readMessage() throws IOException, ClassNotFoundException;
+    protected abstract void handleMessage(Message<MessageType> message) throws IOException, ClassNotFoundException;
 }

@@ -1,13 +1,16 @@
 package server;
 
+import message.Message;
 import message.MessageFactory;
 import message.MessageHandler;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,8 +23,7 @@ public abstract class Server<MessageType> {
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer sentMessageBuffer;
     protected final ByteBuffer messageSizeBuffer;
-    protected Thread asyncWriteMessageThread;
-    protected Thread asyncReadMessageThread;
+    protected Thread asyncProcessingThread;
     protected int ID_COUNTER = 0;
     protected final int MAX_BUFFER_CAPACITY = 10000;
     protected final int MAX_BANDWIDTH = 1024;
@@ -50,26 +52,25 @@ public abstract class Server<MessageType> {
         serverSocket.register(selector, SelectionKey.OP_ACCEPT);
     }
 
-    protected void startAsyncWriteMessage() {
-        asyncWriteMessageThread = new Thread(() -> {
+    protected void startAsyncProcessing() {
+        asyncProcessingThread = new Thread(() -> {
             try {
                 while (running.get()) {
+                    asyncReadMessage();
                     asyncWriteMessage();
                 }
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         });
-        asyncWriteMessageThread.start();
+        asyncProcessingThread.start();
     }
 
-    protected void startAsyncReadMessage() {
-        asyncReadMessageThread = new Thread(() -> {
-            while (running.get()) {
-                asyncReadMessage();
-            }
-        });
-        asyncReadMessageThread.start();
+    protected Message<MessageType> readMessage(SocketChannel client) throws IOException, ClassNotFoundException {
+        var messageSize = messageHandler.readMessageSize(client, messageSizeBuffer);
+        receivedMessageBuffer.limit(messageSize);
+
+        return messageHandler.readMessage(client, receivedMessageBuffer);
     }
 
     public void listenForMessages() throws IOException, ClassNotFoundException {
@@ -85,7 +86,7 @@ public abstract class Server<MessageType> {
                     acceptClient();
                 }
                 if (key.isReadable()) {
-                    readMessage(key);
+                    handleMessage(key);
                 }
 
             }
@@ -99,9 +100,15 @@ public abstract class Server<MessageType> {
         client.register(selector, SelectionKey.OP_READ, ID_COUNTER++);
     }
 
+    public void disconnect() throws IOException, InterruptedException {
+        serverSocket.close();
+        running.set(false);
+        asyncProcessingThread.join();
+    }
+
     protected abstract void asyncWriteMessage() throws IOException, InterruptedException;
 
     protected abstract void asyncReadMessage();
 
-    protected abstract void readMessage(SelectionKey key) throws IOException, ClassNotFoundException;
+    protected abstract void handleMessage(SelectionKey key) throws IOException, ClassNotFoundException;
 }
