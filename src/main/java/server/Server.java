@@ -3,7 +3,6 @@ package server;
 import message.Message;
 import message.MessageFactory;
 import message.MessageHandler;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -12,18 +11,19 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class Server<MessageType> {
-    protected Selector selector;
-    protected ServerSocketChannel serverSocket;
-    protected final MessageHandler<MessageType> messageHandler;
-    protected final MessageFactory<MessageType> messageFactory;
+    private final Selector selector;
+    private ServerSocketChannel serverSocket;
+    private final MessageHandler<MessageType> messageHandler;
+    private final MessageFactory<MessageType> messageFactory;
+    private Thread asyncProcessingThread;
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer sentMessageBuffer;
     protected final ByteBuffer messageSizeBuffer;
-    protected Thread asyncProcessingThread;
     protected int ID_COUNTER = 0;
     protected final int MAX_BUFFER_CAPACITY = 10000;
     protected final int MAX_BANDWIDTH = 1024;
@@ -66,11 +66,19 @@ public abstract class Server<MessageType> {
         asyncProcessingThread.start();
     }
 
-    protected Message<MessageType> readMessage(SocketChannel client) throws IOException, ClassNotFoundException {
+    public Message<MessageType> readMessage(SocketChannel client) throws IOException, ClassNotFoundException {
         var messageSize = messageHandler.readMessageSize(client, messageSizeBuffer);
         receivedMessageBuffer.limit(messageSize);
 
         return messageHandler.readMessage(client, receivedMessageBuffer);
+    }
+
+    public void writeMessage(Message<MessageType> message, SocketChannel client) throws IOException {
+        messageHandler.writeMessage(message, client, sentMessageBuffer);
+    }
+
+    public Message<MessageType> constructMessage(MessageType type, List<?> objects){
+        return messageFactory.constructMessage(type, objects);
     }
 
     public void listenForMessages() throws IOException, ClassNotFoundException {
