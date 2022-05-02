@@ -4,7 +4,6 @@ import file.FileInfo;
 import file.LocalFile;
 import message.Message;
 import server.Server;
-
 import java.io.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -30,13 +29,13 @@ public class ServerImpl extends Server<CustomMessageType> {
     protected void asyncWriteMessage() throws IOException {
         for (var file : requestedFiles) {
             System.out.println("Remaining bytes: " + file.getRemainingBytes());
+
             var fileBytesMessage =
-                    messageFactory.constructMessage(
+                    constructMessage(
                             CustomMessageType.DOWNLOAD_FILE,
                             List.of(file.getClientFileToken(), file.readBytesFromFile(MAX_BANDWIDTH))
                     );
-
-            messageHandler.writeMessage(fileBytesMessage, file.getReceiver(), sentMessageBuffer);
+            writeMessage(fileBytesMessage, file.getReceiver());
         }
         requestedFiles.removeIf(localFile -> localFile.getRemainingBytes() <= 0 || !localFile.getReceiver().isOpen());
     }
@@ -75,9 +74,9 @@ public class ServerImpl extends Server<CustomMessageType> {
                         .collect(Collectors.toList());
 
         var filesInDirectoryResponse =
-                messageFactory.constructMessage(CustomMessageType.CHANGE_DIRECTORY, filesInRequestedDirectory);
+                constructMessage(CustomMessageType.CHANGE_DIRECTORY, filesInRequestedDirectory);
 
-        messageHandler.writeMessage(filesInDirectoryResponse, client, sentMessageBuffer);
+        writeMessage(filesInDirectoryResponse, client);
     }
 
     private void handleDeleteRequest(Message<CustomMessageType> message, SocketChannel client) throws IOException {
@@ -87,14 +86,15 @@ public class ServerImpl extends Server<CustomMessageType> {
 
         if (fileBeingDeleted.delete()) {
             var fileDeletedResponse =
-                    messageFactory.constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("File successfully deleted."));
+                    constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("File successfully deleted."));
 
-            messageHandler.writeMessage(fileDeletedResponse, client, sentMessageBuffer);
+
+            writeMessage(fileDeletedResponse, client);
         } else {
             var noSuchFileResponse =
-                    messageFactory.constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("Couldn't delete file."));
+                    constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("Couldn't delete file."));
 
-            messageHandler.writeMessage(noSuchFileResponse, client, sentMessageBuffer);
+            writeMessage(noSuchFileResponse, client);
         }
     }
 
