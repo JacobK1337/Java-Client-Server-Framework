@@ -7,20 +7,21 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class Client<MessageType> {
-    protected SocketChannel clientSocket;
+    private final SocketChannel clientSocket;
+    private final MessageHandler<MessageType> messageHandler;
+    private final MessageFactory<MessageType> messageFactory;
     protected final ByteBuffer sentMessageBuffer;
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer messageSizeBuffer;
-    protected MessageHandler<MessageType> messageHandler;
-    protected MessageFactory<MessageType> messageFactory;
     protected Thread asyncProcessingThread;
-    protected int MAX_BUFFER_CAPACITY = 10000;
-    protected int MAX_BANDWIDTH = 1024;
+    protected final int MAX_BUFFER_CAPACITY = 10000;
+    protected final int MAX_BANDWIDTH = 1024;
     protected final int MESSAGE_HEADER_SIZE = 4;
-    protected AtomicBoolean running = new AtomicBoolean(false);
+    protected final AtomicBoolean running = new AtomicBoolean(false);
 
     public Client(String address, int port,
                   MessageHandler<MessageType> messageHandler,
@@ -50,11 +51,19 @@ public abstract class Client<MessageType> {
         asyncProcessingThread.start();
     }
 
-    protected Message<MessageType> readMessage() throws IOException, ClassNotFoundException {
+    public Message<MessageType> readMessage() throws IOException, ClassNotFoundException {
         var messageSize = messageHandler.readMessageSize(clientSocket, messageSizeBuffer);
         receivedMessageBuffer.limit(messageSize);
 
         return messageHandler.readMessage(clientSocket, receivedMessageBuffer);
+    }
+
+    public void writeMessage(Message<MessageType> message) throws IOException {
+        messageHandler.writeMessage(message, clientSocket, sentMessageBuffer);
+    }
+
+    public Message<MessageType> constructMessage(MessageType type, List<?> objects){
+        return messageFactory.constructMessage(type, objects);
     }
 
     public void disconnect() throws IOException, InterruptedException {
