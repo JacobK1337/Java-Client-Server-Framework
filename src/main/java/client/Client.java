@@ -1,5 +1,6 @@
 package client;
 
+import message.Message;
 import message.MessageFactory;
 import message.MessageHandler;
 import java.io.IOException;
@@ -8,14 +9,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class Client <MessageType> {
+public abstract class Client<MessageType> {
     protected SocketChannel clientSocket;
     protected final ByteBuffer sentMessageBuffer;
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer messageSizeBuffer;
     protected MessageHandler<MessageType> messageHandler;
     protected MessageFactory<MessageType> messageFactory;
-    protected Thread concurrentDataTransferThread;
+    protected Thread asyncProcessingThread;
     protected int MAX_BUFFER_CAPACITY = 10000;
     protected int MAX_BANDWIDTH = 1024;
     protected final int MESSAGE_HEADER_SIZE = 4;
@@ -35,21 +36,36 @@ public abstract class Client <MessageType> {
         running.set(true);
     }
 
-    protected void startConcurrentTransfer() {
-        concurrentDataTransferThread = new Thread(() -> {
+    protected void startAsyncProcessing() {
+        asyncProcessingThread = new Thread(() -> {
             while (running.get()) {
-                concurrentDataTransfer();
+                try {
+                    asyncReadMessage();
+                    asyncWriteMessage();
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
             }
         });
-        concurrentDataTransferThread.start();
+        asyncProcessingThread.start();
+    }
+
+    protected Message<MessageType> readMessage() throws IOException, ClassNotFoundException {
+        var messageSize = messageHandler.readMessageSize(clientSocket, messageSizeBuffer);
+        receivedMessageBuffer.limit(messageSize);
+
+        return messageHandler.readMessage(clientSocket, receivedMessageBuffer);
     }
 
     public void disconnect() throws IOException, InterruptedException {
         clientSocket.close();
         running.set(false);
-        concurrentDataTransferThread.join();
+        asyncProcessingThread.join();
     }
 
-    protected abstract void concurrentDataTransfer();
-    protected abstract void readMessage() throws IOException, ClassNotFoundException;
+    protected abstract void asyncWriteMessage();
+
+    protected abstract void asyncReadMessage() throws IOException, ClassNotFoundException;
+
+    protected abstract void handleMessage(Message<MessageType> message) throws IOException, ClassNotFoundException;
 }

@@ -1,13 +1,6 @@
-project_utils\RemoteFile.class
-message\Message.class
-project_utils\FileInfo$FileType.class
-message\MessageFactory.class
-custom_implementations\MessageFactoryImpl.class
-project_utils\Serializer.class
 client\Client.class
-custom_implementations\MessageHandlerImpl.class
-project_utils\FileInfo.class
-project_utils\LocalFile.class
+message\Message.class
+message\MessageFactory.class
 message\MessageHandler.class
-custom_implementations\CustomMessageType.class
+utils\Serializer.class
 server\Server.class

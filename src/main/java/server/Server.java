@@ -1,19 +1,21 @@
 package server;
 
+import message.Message;
 import message.MessageFactory;
 import message.MessageHandler;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class Server <MessageType> {
-    protected Thread concurrentDataTransferThread;
+public abstract class Server<MessageType> {
     protected Selector selector;
     protected ServerSocketChannel serverSocket;
     protected final MessageHandler<MessageType> messageHandler;
@@ -21,7 +23,7 @@ public abstract class Server <MessageType> {
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer sentMessageBuffer;
     protected final ByteBuffer messageSizeBuffer;
-    protected final String defaultServerPath = "C:\\Users\\kubcz\\Desktop\\";
+    protected Thread asyncProcessingThread;
     protected int ID_COUNTER = 0;
     protected final int MAX_BUFFER_CAPACITY = 10000;
     protected final int MAX_BANDWIDTH = 1024;
@@ -29,8 +31,8 @@ public abstract class Server <MessageType> {
     protected AtomicBoolean running = new AtomicBoolean(false);
 
     public Server(int port,
-                  MessageFactory<MessageType> messageFactory,
-                  MessageHandler<MessageType> messageHandler) throws IOException {
+                  MessageHandler<MessageType> messageHandler,
+                  MessageFactory<MessageType> messageFactory) throws IOException {
         this.selector = Selector.open();
         configureSocket(port);
 
@@ -50,17 +52,25 @@ public abstract class Server <MessageType> {
         serverSocket.register(selector, SelectionKey.OP_ACCEPT);
     }
 
-    public void startConcurrentTransfer() {
-        concurrentDataTransferThread = new Thread(() -> {
+    protected void startAsyncProcessing() {
+        asyncProcessingThread = new Thread(() -> {
             try {
                 while (running.get()) {
-                    concurrentDataTransfer();
+                    asyncReadMessage();
+                    asyncWriteMessage();
                 }
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         });
-        concurrentDataTransferThread.start();
+        asyncProcessingThread.start();
+    }
+
+    protected Message<MessageType> readMessage(SocketChannel client) throws IOException, ClassNotFoundException {
+        var messageSize = messageHandler.readMessageSize(client, messageSizeBuffer);
+        receivedMessageBuffer.limit(messageSize);
+
+        return messageHandler.readMessage(client, receivedMessageBuffer);
     }
 
     public void listenForMessages() throws IOException, ClassNotFoundException {
@@ -76,7 +86,7 @@ public abstract class Server <MessageType> {
                     acceptClient();
                 }
                 if (key.isReadable()) {
-                    readMessage(key);
+                    handleMessage(key);
                 }
 
             }
@@ -90,6 +100,15 @@ public abstract class Server <MessageType> {
         client.register(selector, SelectionKey.OP_READ, ID_COUNTER++);
     }
 
-    protected abstract void concurrentDataTransfer() throws IOException, InterruptedException;
-    protected abstract void readMessage(SelectionKey key) throws IOException, ClassNotFoundException;
+    public void disconnect() throws IOException, InterruptedException {
+        serverSocket.close();
+        running.set(false);
+        asyncProcessingThread.join();
+    }
+
+    protected abstract void asyncWriteMessage() throws IOException, InterruptedException;
+
+    protected abstract void asyncReadMessage();
+
+    protected abstract void handleMessage(SelectionKey key) throws IOException, ClassNotFoundException;
 }
