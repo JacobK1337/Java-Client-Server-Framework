@@ -1,3 +1,8 @@
-ServerApp.class
 ServerImpl$1.class
+file\RemoteFile.class
+file\FileInfo.class
+file\FileInfo$FileType.class
+ServerApp.class
+CustomMessageType.class
+file\LocalFile.class
 ServerImpl.class

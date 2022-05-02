@@ -1,33 +1,33 @@
-import custom_implementations.CustomMessageType;
-import custom_implementations.MessageFactoryImpl;
-import custom_implementations.MessageHandlerImpl;
-import project_utils.FileInfo;
-import project_utils.LocalFile;
+import message.MessageFactory;
+import message.MessageHandler;
+import file.FileInfo;
+import file.LocalFile;
 import message.Message;
 import server.Server;
+
 import java.io.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ServerImpl extends Server<CustomMessageType> {
     private final Queue<LocalFile> requestedFiles = new LinkedBlockingQueue<>();
-    protected final Lock requestedFilesEmptyLock = new ReentrantLock();
-    protected final Condition requestedFilesEmpty = requestedFilesEmptyLock.newCondition();
+    protected final String defaultServerPath = "C:\\Users\\kubcz\\Desktop\\";
 
     public ServerImpl(int port) throws IOException {
-        super(port, new MessageFactoryImpl(), new MessageHandlerImpl());
-        startConcurrentTransfer();
+        super(port, new MessageHandler<CustomMessageType>(), new MessageFactory<CustomMessageType>());
+        startAsyncProcessing();
     }
 
     @Override
-    protected void concurrentDataTransfer() throws IOException {
+    protected void asyncReadMessage() {
+    }
+
+    @Override
+    protected void asyncWriteMessage() throws IOException {
         for (var file : requestedFiles) {
             System.out.println("Remaining bytes: " + file.getRemainingBytes());
             var fileBytesMessage =
@@ -42,33 +42,24 @@ public class ServerImpl extends Server<CustomMessageType> {
     }
 
     @Override
-    protected void readMessage(SelectionKey key) throws IOException, ClassNotFoundException {
+    protected void handleMessage(SelectionKey key) throws IOException, ClassNotFoundException {
         var client = (SocketChannel) key.channel();
 
-        var messageSize = messageHandler.readMessageSize(client, messageSizeBuffer);
-        receivedMessageBuffer.limit(messageSize);
-        var receivedRequest = messageHandler.readMessage(client, receivedMessageBuffer);
-
+        var receivedRequest = readMessage(client);
         switch (receivedRequest.getMessageType()) {
             case DOWNLOAD_FILE -> handleDownloadRequest(receivedRequest, client);
             case CHANGE_DIRECTORY -> handleChangeDirectoryRequest(receivedRequest, client);
             case DELETE_FILE -> handleDeleteRequest(receivedRequest, client);
         }
-
     }
 
     private void handleDownloadRequest(Message<CustomMessageType> message, SocketChannel client) throws FileNotFoundException {
-        requestedFilesEmptyLock.lock();
-
         while (!message.isBufferEmpty()) {
             var clientFileId = (Long) message.extractFromBuffer();
             var fileName = (String) message.extractFromBuffer();
 
             requestedFiles.add(new LocalFile(clientFileId, defaultServerPath + fileName, client));
-            requestedFilesEmpty.signal();
         }
-
-        requestedFilesEmptyLock.unlock();
     }
 
     private void handleChangeDirectoryRequest(Message<CustomMessageType> message, SocketChannel client) throws IOException {
@@ -99,9 +90,7 @@ public class ServerImpl extends Server<CustomMessageType> {
                     messageFactory.constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("File successfully deleted."));
 
             messageHandler.writeMessage(fileDeletedResponse, client, sentMessageBuffer);
-        }
-
-        else {
+        } else {
             var noSuchFileResponse =
                     messageFactory.constructMessage(CustomMessageType.REQUEST_ACCEPT, List.of("Couldn't delete file."));
 
