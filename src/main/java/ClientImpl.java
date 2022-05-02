@@ -21,10 +21,8 @@ public class ClientImpl extends Client<CustomMessageType> {
     public ClientImpl(String address, int port) throws IOException {
         super(address, port, new MessageHandler<CustomMessageType>(), new MessageFactory<CustomMessageType>());
 
-        var getServerFilesRequest =
-                messageFactory.constructMessage(CustomMessageType.CHANGE_DIRECTORY, List.of(currentServerPath));
-        messageHandler.writeMessage(getServerFilesRequest, clientSocket, sentMessageBuffer);
-
+        var getServerFilesRequest = constructMessage(CustomMessageType.CHANGE_DIRECTORY, List.of(currentServerPath));
+        writeMessage(getServerFilesRequest);
         startAsyncProcessing();
     }
 
@@ -56,9 +54,6 @@ public class ClientImpl extends Client<CustomMessageType> {
         );
     }
 
-    public void sendRequest(Message<CustomMessageType> message) throws IOException {
-        messageHandler.writeMessage(message, clientSocket, sentMessageBuffer);
-    }
 
     public String getCurrentServerPath() {
         return currentServerPath;

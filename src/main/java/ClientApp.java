@@ -35,7 +35,7 @@ public class ClientApp {
                                 (() -> new RuntimeException("No such file."))
                 );
 
-                clientInstance.sendRequest(downloadRequest);
+                clientInstance.writeMessage(downloadRequest);
             } else if (commandAndParam[0].equals("ls")) {
                 clientInstance
                         .getFilesInServerDirectory()
@@ -48,7 +48,7 @@ public class ClientApp {
                                 List.of(clientInstance.getCurrentServerPath(), commandAndParam[1])
                         );
 
-                clientInstance.sendRequest(deleteRequest);
+                clientInstance.writeMessage(deleteRequest);
             }
         }
     }
