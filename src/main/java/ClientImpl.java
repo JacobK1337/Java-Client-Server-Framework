@@ -1,6 +1,4 @@
 import client.Client;
-import message.MessageFactory;
-import message.MessageHandler;
 import file.FileInfo;
 import file.RemoteFile;
 import message.Message;
@@ -19,7 +17,7 @@ public class ClientImpl extends Client<CustomMessageType> {
     private List<FileInfo> filesInServerDirectory = new ArrayList<>();
 
     public ClientImpl(String address, int port) throws IOException {
-        super(address, port, new MessageHandler<CustomMessageType>(), new MessageFactory<CustomMessageType>());
+        super(address, port);
 
         var getServerFilesRequest = constructMessage(CustomMessageType.CHANGE_DIRECTORY, List.of(currentServerPath));
         writeMessage(getServerFilesRequest);
