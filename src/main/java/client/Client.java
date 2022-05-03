@@ -12,8 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class Client<MessageType> {
     private final SocketChannel clientSocket;
-    private final MessageHandler<MessageType> messageHandler;
-    private final MessageFactory<MessageType> messageFactory;
+    private final MessageHandler<MessageType> messageHandler = new MessageHandler<>();
+    private final MessageFactory<MessageType> messageFactory = new MessageFactory<>();
     protected final ByteBuffer sentMessageBuffer;
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer messageSizeBuffer;
@@ -23,16 +23,12 @@ public abstract class Client<MessageType> {
     protected final int MESSAGE_HEADER_SIZE = 4;
     protected final AtomicBoolean running = new AtomicBoolean(false);
 
-    public Client(String address, int port,
-                  MessageHandler<MessageType> messageHandler,
-                  MessageFactory<MessageType> messageFactory) throws IOException {
-
+    public Client(String address, int port) throws IOException {
         this.clientSocket = SocketChannel.open(new InetSocketAddress(address, port));
         this.receivedMessageBuffer = ByteBuffer.allocate(MAX_BUFFER_CAPACITY);
         this.sentMessageBuffer = ByteBuffer.allocate(MAX_BUFFER_CAPACITY);
         this.messageSizeBuffer = ByteBuffer.allocate(MESSAGE_HEADER_SIZE);
-        this.messageHandler = messageHandler;
-        this.messageFactory = messageFactory;
+
 
         running.set(true);
     }
@@ -67,10 +63,13 @@ public abstract class Client<MessageType> {
     }
 
     public void disconnect() throws IOException, InterruptedException {
+
         clientSocket.close();
         running.set(false);
-        asyncProcessingThread.join();
+        if(asyncProcessingThread != null)
+            asyncProcessingThread.join();
     }
+
 
     protected abstract void asyncWriteMessage();
 

@@ -18,8 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class Server<MessageType> {
     private final Selector selector;
     private ServerSocketChannel serverSocket;
-    private final MessageHandler<MessageType> messageHandler;
-    private final MessageFactory<MessageType> messageFactory;
+    private final MessageHandler<MessageType> messageHandler = new MessageHandler<>();
+    private final MessageFactory<MessageType> messageFactory = new MessageFactory<>();
     private Thread asyncProcessingThread;
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer sentMessageBuffer;
@@ -30,17 +30,13 @@ public abstract class Server<MessageType> {
     protected final int MESSAGE_HEADER_SIZE = 4;
     protected AtomicBoolean running = new AtomicBoolean(false);
 
-    public Server(int port,
-                  MessageHandler<MessageType> messageHandler,
-                  MessageFactory<MessageType> messageFactory) throws IOException {
+    public Server(int port) throws IOException {
         this.selector = Selector.open();
         configureSocket(port);
 
         this.receivedMessageBuffer = ByteBuffer.allocate(MAX_BUFFER_CAPACITY);
         this.sentMessageBuffer = ByteBuffer.allocate(MAX_BUFFER_CAPACITY);
         this.messageSizeBuffer = ByteBuffer.allocate(MESSAGE_HEADER_SIZE);
-        this.messageFactory = messageFactory;
-        this.messageHandler = messageHandler;
 
         running.set(true);
     }
@@ -102,16 +98,18 @@ public abstract class Server<MessageType> {
         }
     }
 
-    private void acceptClient() throws IOException {
+    public SocketChannel acceptClient() throws IOException {
         var client = serverSocket.accept();
         client.configureBlocking(false);
         client.register(selector, SelectionKey.OP_READ, ID_COUNTER++);
+        return client;
     }
 
     public void disconnect() throws IOException, InterruptedException {
         serverSocket.close();
         running.set(false);
-        asyncProcessingThread.join();
+        if(asyncProcessingThread != null)
+            asyncProcessingThread.join();
     }
 
     protected abstract void asyncWriteMessage() throws IOException, InterruptedException;
