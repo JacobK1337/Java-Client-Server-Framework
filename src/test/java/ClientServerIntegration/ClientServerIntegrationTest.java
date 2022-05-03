@@ -3,7 +3,6 @@ package ClientServerIntegration;
 import TestMessageType.TestMessageType;
 import client.Client;
 import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
