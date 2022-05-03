@@ -17,7 +17,7 @@ public class ServerImpl extends Server<CustomMessageType> {
     protected final String defaultServerPath = "C:\\Users\\kubcz\\Desktop\\";
 
     public ServerImpl(int port) throws IOException {
-        super(port, new MessageHandler<CustomMessageType>(), new MessageFactory<CustomMessageType>());
+        super(port);
         startAsyncProcessing();
     }
 
