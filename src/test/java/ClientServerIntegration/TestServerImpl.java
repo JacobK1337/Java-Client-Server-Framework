@@ -6,8 +6,8 @@ import server.Server;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 
-public class ServerTest extends Server<TestMessageType> {
-    public ServerTest(int port) throws IOException {
+public class TestServerImpl extends Server<TestMessageType> {
+    public TestServerImpl(int port) throws IOException {
         super(port);
     }
 

@@ -22,7 +22,7 @@ class ClientServerIntegrationTest {
     @BeforeEach
     public void establishConnections() throws IOException {
         if (isSetup) return;
-        underTestServer = new ServerTest(port);
+        underTestServer = new TestServerImpl(port);
         underTestClient = new TestClientImpl("localhost", port);
         clientSocketAcceptedByServer = underTestServer.acceptClient();
         isSetup = true;
