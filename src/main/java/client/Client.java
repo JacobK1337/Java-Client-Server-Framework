@@ -12,8 +12,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class Client<MessageType> {
     private final SocketChannel clientSocket;
+<<<<<<< HEAD
     private final MessageHandler<MessageType> messageHandler = new MessageHandler<>();
     private final MessageFactory<MessageType> messageFactory = new MessageFactory<>();
+=======
+    private final MessageHandler<MessageType> messageHandler;
+    private final MessageFactory<MessageType> messageFactory;
+>>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
     protected final ByteBuffer sentMessageBuffer;
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer messageSizeBuffer;
@@ -22,6 +27,13 @@ public abstract class Client<MessageType> {
     protected final int MAX_BANDWIDTH = 1024;
     protected final int MESSAGE_HEADER_SIZE = 4;
     protected final AtomicBoolean running = new AtomicBoolean(false);
+<<<<<<< HEAD
+=======
+
+    public Client(String address, int port,
+                  MessageHandler<MessageType> messageHandler,
+                  MessageFactory<MessageType> messageFactory) throws IOException {
+>>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
 
     public Client(String address, int port) throws IOException {
         this.clientSocket = SocketChannel.open(new InetSocketAddress(address, port));
@@ -66,11 +78,17 @@ public abstract class Client<MessageType> {
 
         clientSocket.close();
         running.set(false);
+<<<<<<< HEAD
         if(asyncProcessingThread != null)
             asyncProcessingThread.join();
     }
 
 
+=======
+        asyncProcessingThread.join();
+    }
+
+>>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
     protected abstract void asyncWriteMessage();
 
     protected abstract void asyncReadMessage() throws IOException, ClassNotFoundException;
