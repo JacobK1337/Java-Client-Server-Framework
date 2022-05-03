@@ -18,13 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class Server<MessageType> {
     private final Selector selector;
     private ServerSocketChannel serverSocket;
-<<<<<<< HEAD
     private final MessageHandler<MessageType> messageHandler = new MessageHandler<>();
     private final MessageFactory<MessageType> messageFactory = new MessageFactory<>();
-=======
-    private final MessageHandler<MessageType> messageHandler;
-    private final MessageFactory<MessageType> messageFactory;
->>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
     private Thread asyncProcessingThread;
     protected final ByteBuffer receivedMessageBuffer;
     protected final ByteBuffer sentMessageBuffer;
@@ -35,13 +30,7 @@ public abstract class Server<MessageType> {
     protected final int MESSAGE_HEADER_SIZE = 4;
     protected AtomicBoolean running = new AtomicBoolean(false);
 
-<<<<<<< HEAD
     public Server(int port) throws IOException {
-=======
-    public Server(int port,
-                  MessageHandler<MessageType> messageHandler,
-                  MessageFactory<MessageType> messageFactory) throws IOException {
->>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
         this.selector = Selector.open();
         configureSocket(port);
 
@@ -123,15 +112,6 @@ public abstract class Server<MessageType> {
             asyncProcessingThread.join();
     }
 
-<<<<<<< HEAD
-=======
-    public void disconnect() throws IOException, InterruptedException {
-        serverSocket.close();
-        running.set(false);
-        asyncProcessingThread.join();
-    }
-
->>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
     protected abstract void asyncWriteMessage() throws IOException, InterruptedException;
 
     protected abstract void asyncReadMessage();

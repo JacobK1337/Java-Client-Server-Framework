@@ -10,10 +10,7 @@ import java.nio.channels.SocketChannel;
 
 public class MessageHandler<MessageType> {
     public Message<MessageType> readMessage(SocketChannel socket, ByteBuffer buffer) throws IOException, ClassNotFoundException {
-<<<<<<< HEAD
 
-=======
->>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
         int countRead = 0;
         while (countRead < buffer.limit()) {
             countRead += socket.read(buffer);
@@ -53,11 +50,7 @@ public class MessageHandler<MessageType> {
             countWritten += socket.write(buffer);
         }
 
-<<<<<<< HEAD
         buffer.rewind();
-=======
-        buffer.clear();
->>>>>>> 52274a7996a38a7b34dfb390a3fe398932691b14
     }
 
 }
