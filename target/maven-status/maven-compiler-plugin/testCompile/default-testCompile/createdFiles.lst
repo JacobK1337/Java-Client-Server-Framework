@@ -1,5 +1,5 @@
 ClientServerIntegration\ClientServerIntegrationTest.class
 message\MessageHandlerTest.class
-ClientServerIntegration\ServerTest.class
+ClientServerIntegration\TestServerImpl.class
 ClientServerIntegration\TestClientImpl.class
 TestMessageType\TestMessageType.class
