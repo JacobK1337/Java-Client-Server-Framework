@@ -85,14 +85,12 @@ public abstract class Server<MessageType> {
         while (selectorIter.hasNext()) {
             SelectionKey key = selectorIter.next();
             if (key.channel().isOpen()) {
-
                 if (key.isAcceptable()) {
                     acceptClient();
                 }
                 if (key.isReadable()) {
                     handleMessage(key);
                 }
-
             }
             selectorIter.remove();
         }
