@@ -3,6 +3,7 @@ package client;
 import message.Message;
 import message.MessageFactory;
 import message.MessageHandler;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -58,7 +59,7 @@ public abstract class Client<MessageType> {
         messageHandler.writeMessage(message, clientSocket, sentMessageBuffer);
     }
 
-    public Message<MessageType> constructMessage(MessageType type, List<?> objects){
+    public Message<MessageType> constructMessage(MessageType type, List<?> objects) {
         return messageFactory.constructMessage(type, objects);
     }
 
@@ -66,7 +67,7 @@ public abstract class Client<MessageType> {
 
         clientSocket.close();
         running.set(false);
-        if(asyncProcessingThread != null)
+        if (asyncProcessingThread != null)
             asyncProcessingThread.join();
     }
 

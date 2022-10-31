@@ -3,6 +3,7 @@ package server;
 import message.Message;
 import message.MessageFactory;
 import message.MessageHandler;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -73,7 +74,7 @@ public abstract class Server<MessageType> {
         messageHandler.writeMessage(message, client, sentMessageBuffer);
     }
 
-    public Message<MessageType> constructMessage(MessageType type, List<?> objects){
+    public Message<MessageType> constructMessage(MessageType type, List<?> objects) {
         return messageFactory.constructMessage(type, objects);
     }
 
@@ -97,6 +98,7 @@ public abstract class Server<MessageType> {
     }
 
     public SocketChannel acceptClient() throws IOException {
+        System.out.println("Accepting client");
         var client = serverSocket.accept();
         client.configureBlocking(false);
         client.register(selector, SelectionKey.OP_READ, ID_COUNTER++);
@@ -106,7 +108,7 @@ public abstract class Server<MessageType> {
     public void disconnect() throws IOException, InterruptedException {
         serverSocket.close();
         running.set(false);
-        if(asyncProcessingThread != null)
+        if (asyncProcessingThread != null)
             asyncProcessingThread.join();
     }
 
